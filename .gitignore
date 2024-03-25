@@ -164,3 +164,6 @@ cython_debug/
 
 # VSCode
 .vscode
+
+# Temp notebooks
+notebooks_temp/

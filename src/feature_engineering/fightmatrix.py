@@ -60,10 +60,6 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
                   FROM 
                     fightmatrix.FIGHTMATRIX_BOUTS
                 ) 
-              ORDER BY 
-                DATE, 
-                EVENT_ID, 
-                BOUT_ORDINAL
             ), 
             stacked_elo_features AS (
               SELECT 
@@ -113,19 +109,9 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
                   ORDER BY 
                     FIGHTER_BOUT_NUMBER ROWS BETWEEN UNBOUNDED PRECEDING 
                     AND 1 PRECEDING
-                ) AS FIGHTER_GLICKO1_CHANGE_AVERAGE, 
-                AVG(OPPONENT_GLICKO1_PRE) OVER(
-                  PARTITION BY FIGHTER_ID 
-                  ORDER BY 
-                    FIGHTER_BOUT_NUMBER ROWS BETWEEN UNBOUNDED PRECEDING 
-                    AND 1 PRECEDING
-                ) AS OPPONENT_GLICKO1_AVERAGE 
+                ) AS FIGHTER_GLICKO1_CHANGE_AVERAGE
               FROM 
                 stacked_elo_raw 
-              ORDER BY 
-                DATE, 
-                EVENT_ID, 
-                BOUT_ORDINAL
             ), 
             bout_num_by_fighter AS (
               SELECT 
@@ -157,10 +143,6 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
                   FROM 
                     main.UFCSTATS_BOUTS_OVERALL
                 ) 
-              ORDER BY 
-                DATE, 
-                EVENT_ID, 
-                BOUT_ORDINAL
             ), 
             ufcstats_fightmatrix_merged_temp AS (
               SELECT 
@@ -175,8 +157,7 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
                 t3.FIGHTER_GLICKO1_PRE, 
                 t3.FIGHTER_GLICKO1_AVERAGE, 
                 t3.FIGHTER_GLICKO1_CHANGE_PREV, 
-                t3.FIGHTER_GLICKO1_CHANGE_AVERAGE, 
-                t3.OPPONENT_GLICKO1_AVERAGE 
+                t3.FIGHTER_GLICKO1_CHANGE_AVERAGE
               FROM 
                 bout_num_by_fighter AS t1 
                 INNER JOIN fightmatrix.FIGHTMATRIX_FIGHTER_LINKAGE AS t2 ON t1.FIGHTER_ID = t2.UFCSTATS_FIGHTER_ID 
@@ -205,17 +186,11 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
                 t2.OPPONENT_ELO_MODIFIED_AVERAGE AS FLOAT
               ) / t3.OPPONENT_ELO_MODIFIED_AVERAGE AS FIGHTMATRIX_OPPONENT_ELO_AVERAGE_RATIO, 
               t2.FIGHTER_GLICKO1_PRE - t3.FIGHTER_GLICKO1_PRE AS FIGHTMATRIX_GLICKO1_DIFF, 
-              CAST(t2.FIGHTER_GLICKO1_PRE AS FLOAT) / t3.FIGHTER_GLICKO1_PRE AS FIGHTMATRIX_GLICKO1_RATIO, 
-              t2.FIGHTER_GLICKO1_AVERAGE - t3.FIGHTER_GLICKO1_AVERAGE AS FIGHTMATRIX_GLICKO1_AVERAGE_DIFF, 
               CAST(
                 t2.FIGHTER_GLICKO1_AVERAGE AS FLOAT
               ) / t3.FIGHTER_GLICKO1_AVERAGE AS FIGHTMATRIX_GLICKO1_AVERAGE_RATIO, 
               t2.FIGHTER_GLICKO1_CHANGE_PREV - t3.FIGHTER_GLICKO1_CHANGE_PREV AS FIGHTMATRIX_GLICKO1_CHANGE_PREV_DIFF, 
               t2.FIGHTER_GLICKO1_CHANGE_AVERAGE - t3.FIGHTER_GLICKO1_CHANGE_AVERAGE AS FIGHTMATRIX_GLICKO1_CHANGE_AVERAGE_DIFF, 
-              t2.OPPONENT_GLICKO1_AVERAGE - t3.OPPONENT_GLICKO1_AVERAGE AS FIGHTMATRIX_OPPONENT_GLICKO1_AVERAGE_DIFF, 
-              CAST(
-                t2.OPPONENT_GLICKO1_AVERAGE AS FLOAT
-              ) / t3.OPPONENT_GLICKO1_AVERAGE AS FIGHTMATRIX_OPPONENT_GLICKO1_AVERAGE_RATIO, 
               CASE t1.RED_OUTCOME WHEN 'W' THEN 1 WHEN 'L' THEN 0 ELSE NULL END AS RED_WIN 
             FROM 
               main.UFCSTATS_BOUTS_OVERALL AS t1 
@@ -327,6 +302,7 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
               t1.BLUE_FIGHTER_ID,
               t2.FIGHTMATRIX_RANKING_POINTS - t3.FIGHTMATRIX_RANKING_POINTS AS FIGHTMATRIX_RANKING_POINTS_DIFF,
               CAST(t2.FIGHTMATRIX_RANKING_POINTS AS FLOAT) / t3.FIGHTMATRIX_RANKING_POINTS AS FIGHTMATRIX_RANKING_POINTS_RATIO,
+              t2.FIGHTMATRIX_RANKING_POINTS_AVERAGE - t3.FIGHTMATRIX_RANKING_POINTS_AVERAGE AS FIGHTMATRIX_RANKING_POINTS_AVERAGE_DIFF,
               CAST(t2.FIGHTMATRIX_RANKING_POINTS_AVERAGE AS FLOAT) / t3.FIGHTMATRIX_RANKING_POINTS_AVERAGE AS FIGHTMATRIX_RANKING_POINTS_AVERAGE_RATIO,
               CASE t1.RED_OUTCOME WHEN 'W' THEN 1 WHEN 'L' THEN 0 ELSE NULL END AS RED_WIN 
             FROM
@@ -358,29 +334,9 @@ class FightMatrixFeatureGenerator(BaseFeatureGenerator):
 
         return ranking_features
 
-    def create_fightmatrix_features_dfs(
-        self, elo_features: pd.DataFrame, ranking_features: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        final_df = elo_features.merge(
-            ranking_features, on=["BOUT_ID", "DATE", "RED_WIN"], how="inner"
-        )
-
-        train_df = final_df.loc[
-            (final_df["DATE"] >= self.TRAIN_CUTOFF_DATE)
-            & (final_df["DATE"] < self.TRAIN_TEST_SPLIT_DATE)
-            & (final_df["RED_WIN"].notnull())
-        ].drop(columns=["DATE"])
-        test_df = final_df.loc[final_df["DATE"] >= self.TRAIN_TEST_SPLIT_DATE].drop(
-            columns=["DATE"]
-        )
-
-        return train_df, test_df
-
     def __call__(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         elo_features = self.create_elo_features()
         ranking_features = self.create_ranking_features()
-        train_df, test_df = self.create_fightmatrix_features_dfs(
-            elo_features, ranking_features
-        )
+        train_df, test_df = self.create_train_test_dfs([elo_features, ranking_features])
 
         return train_df, test_df
