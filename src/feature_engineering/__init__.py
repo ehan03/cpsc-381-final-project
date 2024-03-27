@@ -1,2 +1,1 @@
-from .fightmatrix import FightMatrixFeatureGenerator
-from .fightoddsio import FightOddsIOFeatureGenerator
+from .feature_generator import FeatureGenerator

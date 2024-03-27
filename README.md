@@ -6,11 +6,9 @@ Team Members: Eugene Han, Matt Russo, Alex Yuan, Aaron Yu
 
 ## Setup
 
-Make sure you have Conda installed through a distribution such as Anaconda or Miniconda.
+Python 3.8 was used for this project.
 
-Create a new venv and install the requirements:
+To run our code, create a new venv and install the requirements:
 ```
 pip install -r requirements.txt
 ```
-
-This has been tested on Python 3.8.
