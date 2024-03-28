@@ -214,3 +214,204 @@ ORDER BY
   t1.DATE, 
   t1.EVENT_ID, 
   t1.BOUT_ORDINAL;
+
+
+-- Winning/losing streaks
+WITH sherdog_streak_ids AS (
+  SELECT 
+    t2.UFCSTATS_FIGHTER_ID, 
+    t1.EVENT_ID, 
+    t1.FIGHTER_BOUT_ORDINAL, 
+    t1.OUTCOME, 
+    (
+      (t1.FIGHTER_BOUT_ORDINAL + 1) - ROW_NUMBER() OVER (
+        PARTITION BY t1.FIGHTER_ID, 
+        t1.OUTCOME 
+        ORDER BY 
+          t1.FIGHTER_BOUT_ORDINAL
+      )
+    ) AS rn_diff 
+  FROM 
+    sherdog.SHERDOG_BOUT_HISTORY AS t1 
+    INNER JOIN sherdog.SHERDOG_FIGHTER_LINKAGE AS t2 ON t1.FIGHTER_ID = t2.SHERDOG_FIGHTER_ID
+), 
+sherdog_streaks AS (
+  SELECT 
+    UFCSTATS_FIGHTER_ID, 
+    EVENT_ID, 
+    FIGHTER_BOUT_ORDINAL, 
+    OUTCOME, 
+    ROW_NUMBER() OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID, 
+      rn_diff 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL
+    ) AS streak 
+  FROM 
+    sherdog_streak_ids
+), 
+sherdog_win_lose_streaks AS (
+  SELECT 
+    UFCSTATS_FIGHTER_ID, 
+    EVENT_ID, 
+    FIGHTER_BOUT_ORDINAL, 
+    OUTCOME, 
+    CASE WHEN OUTCOME = 'W' THEN streak ELSE 0 END AS WINNING_STREAK_POST, 
+    CASE WHEN OUTCOME = 'L' THEN streak ELSE 0 END AS LOSING_STREAK_POST 
+  FROM 
+    sherdog_streaks
+), 
+sherdog_streak_features AS (
+  SELECT 
+    UFCSTATS_FIGHTER_ID, 
+    EVENT_ID, 
+    FIGHTER_BOUT_ORDINAL, 
+    LAG(WINNING_STREAK_POST, 1) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL
+    ) AS WINNING_STREAK, 
+    LAG(LOSING_STREAK_POST, 1) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL
+    ) AS LOSING_STREAK, 
+    AVG(WINNING_STREAK_POST) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL ROWS BETWEEN UNBOUNDED PRECEDING 
+        AND 1 PRECEDING
+    ) AS WINNING_STREAK_AVERAGE, 
+    AVG(LOSING_STREAK_POST) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL ROWS BETWEEN UNBOUNDED PRECEDING 
+        AND 1 PRECEDING
+    ) AS LOSING_STREAK_AVERAGE, 
+    MAX(WINNING_STREAK_POST) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL ROWS BETWEEN UNBOUNDED PRECEDING 
+        AND 1 PRECEDING
+    ) AS WINNING_STREAK_MAX, 
+    MAX(LOSING_STREAK_POST) OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL ROWS BETWEEN UNBOUNDED PRECEDING 
+        AND 1 PRECEDING
+    ) AS LOSING_STREAK_MAX 
+  FROM 
+    sherdog_win_lose_streaks
+), 
+sherdog_streak_features_filtered AS (
+  SELECT 
+    *, 
+    ROW_NUMBER() OVER (
+      PARTITION BY UFCSTATS_FIGHTER_ID 
+      ORDER BY 
+        FIGHTER_BOUT_ORDINAL
+    ) AS FIGHTER_BOUT_NUMBER 
+  FROM 
+    sherdog_streak_features 
+  WHERE 
+    EVENT_ID IN (
+      SELECT 
+        EVENT_ID 
+      FROM 
+        sherdog.SHERDOG_BOUTS
+    )
+), 
+sherdog_streak_features_filtered_col_hack AS (
+  SELECT 
+    *, 
+    ROW_NUMBER() OVER(
+      ORDER BY 
+        UFCSTATS_FIGHTER_ID, 
+        FIGHTER_BOUT_NUMBER
+    ) AS col_hack 
+  FROM 
+    sherdoG_streak_features_filtered
+), 
+bout_num_by_fighter AS (
+  SELECT 
+    *, 
+    ROW_NUMBER() OVER(
+      PARTITION BY FIGHTER_ID 
+      ORDER BY 
+        DATE, 
+        EVENT_ID, 
+        BOUT_ORDINAL
+    ) AS FIGHTER_BOUT_NUMBER 
+  FROM 
+    (
+      SELECT 
+        BOUT_ID, 
+        EVENT_ID, 
+        DATE, 
+        BOUT_ORDINAL, 
+        RED_FIGHTER_ID AS FIGHTER_ID 
+      FROM 
+        main.UFCSTATS_BOUTS_OVERALL 
+      UNION ALL 
+      SELECT 
+        BOUT_ID, 
+        EVENT_ID, 
+        DATE, 
+        BOUT_ORDINAL, 
+        BLUE_FIGHTER_ID AS FIGHTER_ID 
+      FROM 
+        main.UFCSTATS_BOUTS_OVERALL
+    )
+), 
+bout_num_by_fighter_col_hack AS (
+  SELECT 
+    *, 
+    ROW_NUMBER() OVER(
+      ORDER BY 
+        FIGHTER_ID, 
+        FIGHTER_BOUT_NUMBER
+    ) AS col_hack 
+  FROM 
+    bout_num_by_fighter
+), 
+ufcstats_streaks_merged_temp AS (
+  SELECT 
+    t1.BOUT_ID, 
+    t1.FIGHTER_ID, 
+    t1.FIGHTER_BOUT_NUMBER, 
+    t2.WINNING_STREAK, 
+    t2.LOSING_STREAK, 
+    t2.WINNING_STREAK_AVERAGE, 
+    t2.LOSING_STREAK_AVERAGE, 
+    t2.WINNING_STREAK_MAX, 
+    t2.LOSING_STREAK_MAX 
+  FROM 
+    bout_num_by_fighter_col_hack AS t1 
+    LEFT JOIN sherdog_streak_features_filtered_col_hack AS t2 ON t1.col_hack = t2.col_hack
+) 
+SELECT 
+  t1.BOUT_ID, 
+  t1.EVENT_ID, 
+  t1.DATE, 
+  t1.BOUT_ORDINAL, 
+  t2.WINNING_STREAK - t3.WINNING_STREAK AS WINNING_STREAK_DIFF, 
+  t2.LOSING_STREAK - t3.LOSING_STREAK AS LOSING_STREAK_DIFF, 
+  t2.WINNING_STREAK_AVERAGE - t3.WINNING_STREAK_AVERAGE AS WINNING_STREAK_AVERAGE_DIFF, 
+  t2.LOSING_STREAK_AVERAGE - t3.LOSING_STREAK_AVERAGE AS LOSING_STREAK_AVERAGE_DIFF, 
+  t2.WINNING_STREAK_MAX - t3.WINNING_STREAK_MAX AS WINNING_STREAK_MAX_DIFF, 
+  t2.LOSING_STREAK_MAX - t3.LOSING_STREAK_MAX AS LOSING_STREAK_MAX_DIFF, 
+  CASE t1.RED_OUTCOME WHEN 'W' THEN 1 WHEN 'L' THEN 0 ELSE NULL END AS RED_WIN 
+FROM 
+  main.UFCSTATS_BOUTS_OVERALL AS t1 
+  INNER JOIN ufcstats_streaks_merged_temp AS t2 ON t1.BOUT_ID = t2.BOUT_ID 
+  AND t1.RED_FIGHTER_ID = t2.FIGHTER_ID 
+  INNER JOIN ufcstats_streaks_merged_temp AS t3 ON t1.BOUT_ID = t3.BOUT_ID 
+  AND t1.BLUE_FIGHTER_ID = t3.FIGHTER_ID 
+WHERE 
+  t2.FIGHTER_BOUT_NUMBER > 1 
+  AND t3.FIGHTER_BOUT_NUMBER > 1 
+  AND t1.DATE >= ? 
+ORDER BY 
+  t1.DATE, 
+  t1.EVENT_ID, 
+  t1.BOUT_ORDINAL;
