@@ -1,4 +1,5 @@
 # standard library imports
+import math
 import os
 import sqlite3
 from functools import reduce
@@ -39,6 +40,7 @@ class FeatureGenerator:
             "ATTACH DATABASE ? AS fightoddsio", (self.FIGHTODDSIO_DB_PATH,)
         )
         self.conn.execute("ATTACH DATABASE ? AS sherdog", (self.SHERDOG_DB_PATH,))
+        self.conn.create_function("SQRT", 1, math.sqrt)
 
     def create_feature_dfs(self) -> List[pd.DataFrame]:
         feature_dfs = []
