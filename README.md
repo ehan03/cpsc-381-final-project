@@ -6,9 +6,11 @@ Team Members: Eugene Han, Matt Russo, Alex Yuan, Aaron Yu
 
 ## Setup
 
-Python 3.8 was used for this project.
+1. Install Python. The project was developed using Python 3.8, but any version >= 3.8 should work.
 
-To run our code, create a new venv and install the requirements:
+2. Create a virtual environment in the project directory and install the required packages:
 ```
 pip install -r requirements.txt
 ```
+
+3. Run the Jupyter notebook `walkthrough.ipynb` to see the project in action.
