@@ -22,7 +22,7 @@ class SimultaneousKelly:
         red_odds: np.ndarray,  # Decimal odds
         blue_odds: np.ndarray,  # Decimal odds
         current_bankroll: float,
-        fraction: float = 0.1,
+        fraction: float = 0.10,
         min_bet: float = 0.10,
     ):
         """
@@ -88,9 +88,11 @@ class SimultaneousKelly:
             cp.sum(b) == 1,
         ]
         problem = cp.Problem(objective, constraints)
-        problem.solve(solver=cp.CLARABEL)
-
-        return b.value
+        try:
+            problem.solve(solver=cp.CLARABEL)
+            return b.value
+        except:
+            return np.zeros(2 * self.n + 1)
 
     def __call__(self) -> Tuple[np.ndarray, np.ndarray]:
         """
