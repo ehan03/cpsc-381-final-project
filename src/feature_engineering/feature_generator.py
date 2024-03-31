@@ -90,7 +90,7 @@ class FeatureGenerator:
         with open(os.path.join(self.QUERIES_PATH, "backtest_odds.sql"), "r") as f:
             query = f.read()
             backtest_odds_df = pd.read_sql(
-                query, self.conn, params=[self.TRAIN_CUTOFF_DATE]
+                query, self.conn, params=[self.TRAIN_TEST_SPLIT_DATE]
             )
 
         return backtest_odds_df
