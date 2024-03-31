@@ -22,7 +22,7 @@ class SimultaneousKelly:
         red_odds: np.ndarray,  # Decimal odds
         blue_odds: np.ndarray,  # Decimal odds
         current_bankroll: float,
-        fraction: float = 0.1,
+        fraction: float = 0.10,
         min_bet: float = 0.10,
     ):
         """
