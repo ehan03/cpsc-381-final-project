@@ -1,5 +1,6 @@
 # standard library imports
 import itertools
+import warnings
 from typing import Tuple
 
 # third party imports
@@ -89,8 +90,10 @@ class SimultaneousKelly:
         ]
         problem = cp.Problem(objective, constraints)
         try:
-            problem.solve(solver=cp.CLARABEL)
-            return b.value
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                problem.solve(solver=cp.CLARABEL)
+                return b.value
         except:
             return np.zeros(2 * self.n + 1)
 
