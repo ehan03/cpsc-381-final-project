@@ -1,12 +1,13 @@
 # standard library imports
 
 # third-party imports
-
 import numpy as np
 import pandas as pd
 
 # local imports
 from src.bet_sizing import SimultaneousKelly
+
+# TODO: Refactor Matt's code lol
 
 
 class BacktestFramework:
