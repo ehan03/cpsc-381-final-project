@@ -1,17 +1,19 @@
 # standard library imports
 
 # third-party imports
-
 import numpy as np
 import pandas as pd
 
 # local imports
 from src.bet_sizing import SimultaneousKelly
 
+# TODO: Refactor Matt's code lol
+
 
 class BacktestFramework:
     """
-    This class is for evaluating betting performance of the models
+    Class for evaluating betting performance of the models over events
+    from 2022 to early 2024
     """
 
     def __init__(self, data, bankroll=100):
