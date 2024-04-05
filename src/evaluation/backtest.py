@@ -68,6 +68,12 @@ class BacktestFramework:
         model_probs["RED_PROBS_GBM"] = red_probs_gbm
         model_probs["BLUE_PROBS_GBM"] = blue_probs_gbm
 
+        # Ensemble
+        red_probs_ensemble = (red_probs_lr + red_probs_rf + red_probs_gbm) / 3
+        blue_probs_ensemble = (blue_probs_lr + blue_probs_rf + blue_probs_gbm) / 3
+        model_probs["RED_PROBS_ENSEMBLE"] = red_probs_ensemble
+        model_probs["BLUE_PROBS_ENSEMBLE"] = blue_probs_ensemble
+
         return model_probs
 
     def helper_calculate_profit(
@@ -90,12 +96,15 @@ class BacktestFramework:
             "BANKROLL_LR": [self.initial_bankroll],
             "BANKROLL_RF": [self.initial_bankroll],
             "BANKROLL_GBM": [self.initial_bankroll],
+            "BANKROLL_ENSEMBLE": [self.initial_bankroll],
             "TOTAL_WAGER_LR": [0.0],
             "TOTAL_WAGER_RF": [0.0],
             "TOTAL_WAGER_GBM": [0.0],
+            "TOTAL_WAGER_ENSEMBLE": [0.0],
             "ROI_LR": [0.0],
             "ROI_RF": [0.0],
             "ROI_GBM": [0.0],
+            "ROI_ENSEMBLE": [0.0],
         }
 
         for event_id in event_ids:
@@ -104,7 +113,7 @@ class BacktestFramework:
             blue_odds = sliced_df["BLUE_FIGHTER_ODDS"].to_numpy()
             results_dict["DATES"].append(pd.to_datetime(sliced_df["DATE"].values[0]))
 
-            for model in ["LR", "RF", "GBM"]:
+            for model in ["LR", "RF", "GBM", "ENSEMBLE"]:
                 red_probs = sliced_df[f"RED_PROBS_{model}"].to_numpy()
                 blue_probs = sliced_df[f"BLUE_PROBS_{model}"].to_numpy()
 
