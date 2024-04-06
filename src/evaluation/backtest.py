@@ -91,12 +91,15 @@ class BacktestFramework:
             "BANKROLL_LR": [self.initial_bankroll],
             "BANKROLL_RF": [self.initial_bankroll],
             "BANKROLL_GBM": [self.initial_bankroll],
+            "BANKROLL_DUMMY": [self.initial_bankroll],
             "TOTAL_WAGER_LR": [0.0],
             "TOTAL_WAGER_RF": [0.0],
             "TOTAL_WAGER_GBM": [0.0],
+            "TOTAL_WAGER_DUMMY": [0.0],
             "ROI_LR": [0.0],
             "ROI_RF": [0.0],
             "ROI_GBM": [0.0],
+            "ROI_DUMMY": [0.0]
         }
 
         for event_id in event_ids:
@@ -105,19 +108,36 @@ class BacktestFramework:
             blue_odds = sliced_df["BLUE_FIGHTER_ODDS"].to_numpy()
             results_dict["DATES"].append(pd.to_datetime(sliced_df["DATE"].values[0]))
 
-            for model in ["LR", "RF", "GBM"]:
-                red_probs = sliced_df[f"RED_PROBS_{model}"].to_numpy()
-                blue_probs = sliced_df[f"BLUE_PROBS_{model}"].to_numpy()
+            for model in ["LR", "RF", "GBM", "DUMMY"]:
+                current_bankroll=results_dict[f"BANKROLL_{model}"][-1]
+                
+                if model == "DUMMY":
+                    red_wagers, blue_wagers = [], []
+                    
+                    for red_odd, blue_odd in zip(red_odds, blue_odds):
+                        wager = np.round(current_bankroll * 0.01, 2)
+                        if red_odd < blue_odd:
+                            red_wagers.append(wager)
+                            blue_wagers.append(0)
+                        else:
+                            red_wagers.append(0)
+                            blue_wagers.append(wager)
+                    
+                    red_wagers, blue_wagers = np.array(red_wagers), np.array(blue_wagers)
+                else:
+                    red_probs = sliced_df[f"RED_PROBS_{model}"].to_numpy()
+                    blue_probs = sliced_df[f"BLUE_PROBS_{model}"].to_numpy()
 
-                kelly = SimultaneousKelly(
-                    red_probs=red_probs,
-                    blue_probs=blue_probs,
-                    red_odds=red_odds,
-                    blue_odds=blue_odds,
-                    current_bankroll=results_dict[f"BANKROLL_{model}"][-1],
-                )
+                    kelly = SimultaneousKelly(
+                        red_probs=red_probs,
+                        blue_probs=blue_probs,
+                        red_odds=red_odds,
+                        blue_odds=blue_odds,
+                        current_bankroll=current_bankroll,
+                    )
 
-                red_wagers, blue_wagers = kelly()
+                    red_wagers, blue_wagers = kelly()
+                
                 sliced_df[f"RED_WAGER_{model}"] = red_wagers
                 sliced_df[f"BLUE_WAGER_{model}"] = blue_wagers
 
@@ -188,6 +208,12 @@ class BacktestFramework:
             label="Gradient Boosting",
             color="#1192e8",
         )
+        ax.step(
+            results_df["DATES"],
+            results_df["BANKROLL_DUMMY"],
+            label="Dummy",
+            color="#008000",
+        )
         ax.hlines(
             y=self.initial_bankroll,
             xmin=results_df["DATES"].min(),
@@ -230,6 +256,12 @@ class BacktestFramework:
             label="Gradient Boosting",
             color="#1192e8",
         )
+        ax.step(
+            results_df["DATES"],
+            results_df["ROI_DUMMY"],
+            label="Dummy",
+            color="#008000",
+        )
         ax.hlines(
             y=0,
             xmin=results_df["DATES"].min(),
@@ -257,9 +289,11 @@ class BacktestFramework:
                     "BANKROLL_LR",
                     "BANKROLL_RF",
                     "BANKROLL_GBM",
+                    "BANKROLL_DUMMY",
                     "ROI_LR",
                     "ROI_RF",
                     "ROI_GBM",
+                    "ROI_DUMMY",
                 ]
             ].tail(1)
         )

@@ -77,8 +77,8 @@ class ModelTrainer:
 
         elif self.model_name == "random_forest":
             param_grid = {
-                "max_depth": [3, 5, 7, 12, 15, 20],
-                "max_leaf_nodes": [None, 50, 70, 80, 90, 100],
+                "max_depth": [7, 12, 15],
+                "max_leaf_nodes": [None, 70, 80],
             }
             clf = RandomForestClassifier(
                 n_estimators=200,
@@ -98,10 +98,8 @@ class ModelTrainer:
             param_grid = {
                 "learning_rate": [0.01, 0.1],
                 "max_depth": [2, 3, 5],
-                "max_features": [None, "sqrt"],
-                "max_leaf_nodes": [None, 10, 20, 30],
             }
-            clf = GradientBoostingClassifier(n_estimators=100, random_state=0)
+            clf = GradientBoostingClassifier(n_estimators=100, random_state=0, max_features="sqrt", max_leaf_nodes=None)
             grid_search = GridSearchCV(
                 clf, param_grid, cv=cv, scoring="neg_log_loss", n_jobs=-1, refit=True
             )
