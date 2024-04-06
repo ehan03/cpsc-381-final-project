@@ -6,6 +6,7 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from IPython.display import display
 from joblib import load
 
 # local imports
@@ -48,7 +49,7 @@ class BacktestFramework:
         model_probs = pd.DataFrame()
         model_probs["BOUT_ID"] = self.test_df["BOUT_ID"].copy()
 
-        X_test = self.test_df.drop(columns=["BOUT_ID", "RED_WIN"])
+        X_test = self.test_df.drop(columns=["BOUT_ID"])
 
         # Logistic Regression
         lr_probs = self.lr.predict_proba(X_test)
@@ -108,7 +109,7 @@ class BacktestFramework:
         }
 
         for event_id in event_ids:
-            sliced_df = combined_df[combined_df["EVENT_ID"] == event_id]
+            sliced_df = combined_df.loc[combined_df["EVENT_ID"] == event_id].copy()
             red_odds = sliced_df["RED_FIGHTER_ODDS"].to_numpy()
             blue_odds = sliced_df["BLUE_FIGHTER_ODDS"].to_numpy()
             results_dict["DATES"].append(pd.to_datetime(sliced_df["DATE"].values[0]))
@@ -140,7 +141,7 @@ class BacktestFramework:
                 sliced_df[f"RED_PROFIT_{model}"] = sliced_df.apply(
                     lambda row: self.helper_calculate_profit(
                         "RED",
-                        row[f"RED_PROBS_{model}"],
+                        row["RED_WIN"],
                         row[f"RED_WAGER_{model}"],
                         row["RED_FIGHTER_ODDS"],
                     ),
@@ -149,7 +150,7 @@ class BacktestFramework:
                 sliced_df[f"BLUE_PROFIT_{model}"] = sliced_df.apply(
                     lambda row: self.helper_calculate_profit(
                         "BLUE",
-                        row[f"RED_PROBS_{model}"],
+                        row["RED_WIN"],
                         row[f"BLUE_WAGER_{model}"],
                         row["BLUE_FIGHTER_ODDS"],
                     ),
@@ -173,17 +174,56 @@ class BacktestFramework:
                 )
                 results_dict[f"ROI_{model}"].append(roi)
 
-        for key in results_dict:
-            if key.startswith("TOTAL_WAGER"):
-                del results_dict[key]
-
         return pd.DataFrame(results_dict)
 
     def plot_bankrolls_over_time(self, results_df: pd.DataFrame) -> None:
         fig, ax = plt.subplots(figsize=(12, 6))
+        ax.step(
+            results_df["DATES"], results_df["BANKROLL_LR"], label="Logistic Regression"
+        )
+        ax.step(results_df["DATES"], results_df["BANKROLL_RF"], label="Random Forest")
+        ax.step(
+            results_df["DATES"], results_df["BANKROLL_GBM"], label="Gradient Boosting"
+        )
+        ax.step(results_df["DATES"], results_df["BANKROLL_ENSEMBLE"], label="Ensemble")
+        ax.hlines(
+            y=self.initial_bankroll,
+            xmin=results_df["DATES"].min(),
+            xmax=results_df["DATES"].max(),
+            color="grey",
+            linestyle="--",
+        )
+        ax.hlines(
+            y=0,
+            xmin=results_df["DATES"].min(),
+            xmax=results_df["DATES"].max(),
+            color="red",
+            linestyle="--",
+        )
+        ax.set_title("Bankroll Over Time")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Bankroll ($)")
+        ax.legend()
+        plt.show()
 
     def plot_roi_over_time(self, results_df: pd.DataFrame) -> None:
         fig, ax = plt.subplots(figsize=(12, 6))
+        ax.step(results_df["DATES"], results_df["ROI_LR"], label="Logistic Regression")
+        ax.step(results_df["DATES"], results_df["ROI_RF"], label="Random Forest")
+        ax.step(results_df["DATES"], results_df["ROI_GBM"], label="Gradient Boosting")
+        ax.step(results_df["DATES"], results_df["ROI_ENSEMBLE"], label="Ensemble")
+        ax.hlines(
+            y=0,
+            xmin=results_df["DATES"].min(),
+            xmax=results_df["DATES"].max(),
+            color="grey",
+            linestyle="--",
+        )
+        ax.set_title("ROI Over Time")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("ROI (%)")
+        ax.legend()
+        plt.show()
 
     def __call__(self) -> None:
         model_probs = self.get_model_probs()
@@ -192,4 +232,17 @@ class BacktestFramework:
         self.plot_roi_over_time(results_df)
 
         # Display the final results
-        print(results_df.tail(1))
+        display(
+            results_df[
+                [
+                    "BANKROLL_LR",
+                    "BANKROLL_RF",
+                    "BANKROLL_GBM",
+                    "BANKROLL_ENSEMBLE",
+                    "ROI_LR",
+                    "ROI_RF",
+                    "ROI_GBM",
+                    "ROI_ENSEMBLE",
+                ]
+            ].tail(1)
+        )
