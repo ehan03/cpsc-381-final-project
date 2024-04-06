@@ -99,7 +99,12 @@ class ModelTrainer:
                 "learning_rate": [0.01, 0.1],
                 "max_depth": [2, 3, 5],
             }
-            clf = GradientBoostingClassifier(n_estimators=100, random_state=0, max_features="sqrt", max_leaf_nodes=None)
+            clf = GradientBoostingClassifier(
+                n_estimators=100,
+                random_state=0,
+                max_features="sqrt",
+                max_leaf_nodes=None,
+            )
             grid_search = GridSearchCV(
                 clf, param_grid, cv=cv, scoring="neg_log_loss", n_jobs=-1, refit=True
             )

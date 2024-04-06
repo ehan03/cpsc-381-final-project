@@ -99,7 +99,7 @@ class BacktestFramework:
             "ROI_LR": [0.0],
             "ROI_RF": [0.0],
             "ROI_GBM": [0.0],
-            "ROI_DUMMY": [0.0]
+            "ROI_DUMMY": [0.0],
         }
 
         for event_id in event_ids:
@@ -109,11 +109,11 @@ class BacktestFramework:
             results_dict["DATES"].append(pd.to_datetime(sliced_df["DATE"].values[0]))
 
             for model in ["LR", "RF", "GBM", "DUMMY"]:
-                current_bankroll=results_dict[f"BANKROLL_{model}"][-1]
-                
+                current_bankroll = results_dict[f"BANKROLL_{model}"][-1]
+
                 if model == "DUMMY":
                     red_wagers, blue_wagers = [], []
-                    
+
                     for red_odd, blue_odd in zip(red_odds, blue_odds):
                         wager = np.round(current_bankroll * 0.01, 2)
                         if red_odd < blue_odd:
@@ -122,8 +122,10 @@ class BacktestFramework:
                         else:
                             red_wagers.append(0)
                             blue_wagers.append(wager)
-                    
-                    red_wagers, blue_wagers = np.array(red_wagers), np.array(blue_wagers)
+
+                    red_wagers, blue_wagers = np.array(red_wagers), np.array(
+                        blue_wagers
+                    )
                 else:
                     red_probs = sliced_df[f"RED_PROBS_{model}"].to_numpy()
                     blue_probs = sliced_df[f"BLUE_PROBS_{model}"].to_numpy()
@@ -137,7 +139,7 @@ class BacktestFramework:
                     )
 
                     red_wagers, blue_wagers = kelly()
-                
+
                 sliced_df[f"RED_WAGER_{model}"] = red_wagers
                 sliced_df[f"BLUE_WAGER_{model}"] = blue_wagers
 
