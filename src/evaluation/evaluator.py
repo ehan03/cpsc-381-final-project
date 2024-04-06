@@ -139,35 +139,41 @@ class Evaluator:
         Plot calibration curves for all models and bookmaker odds
         """
 
-        probs_list = [
-            (model_probs["RED_PROBS_LR"], "Logistic Regression"),
-            (model_probs["RED_PROBS_RF"], "Random Forest"),
-            (model_probs["RED_PROBS_GBM"], "Gradient Boosting"),
-            (model_probs["RED_PROBS_BOOKIES"], "Bookmakers"),
-        ]
-
-        colors = [
-            "#ff8389",
-            "#6929c4",
-            "#1192e8",
-            "grey",
-        ]
-
         plt.style.use("ggplot")
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(2, 2, figsize=(12, 12))
+        ax[0, 0] = CalibrationDisplay.from_predictions(
+            self.test_df["RED_WIN"],
+            model_probs["RED_PROBS_LR"],
+            ax=ax[0, 0],
+            name="Logistic Regression",
+            color="#ff8389",
+            n_bins=10,
+        )
+        ax[0, 1] = CalibrationDisplay.from_predictions(
+            self.test_df["RED_WIN"],
+            model_probs["RED_PROBS_RF"],
+            ax=ax[0, 1],
+            name="Random Forest",
+            color="#6929c4",
+            n_bins=10,
+        )
+        ax[1, 0] = CalibrationDisplay.from_predictions(
+            self.test_df["RED_WIN"],
+            model_probs["RED_PROBS_GBM"],
+            ax=ax[1, 0],
+            name="Gradient Boosting",
+            color="#1192e8",
+            n_bins=10,
+        )
+        ax[1, 1] = CalibrationDisplay.from_predictions(
+            self.test_df["RED_WIN"],
+            model_probs["RED_PROBS_BOOKIES"],
+            ax=ax[1, 1],
+            name="Bookmakers",
+            color="grey",
+            n_bins=10,
+        )
 
-        for (probs, label), color in zip(probs_list, colors):
-            disp = CalibrationDisplay.from_predictions(
-                self.test_df["RED_WIN"],
-                probs,
-                ax=ax,
-                name=label,
-                color=color,
-                n_bins=10,
-            )
-
-        ax.set_title("Calibration Curves")
-        ax.legend()
         plt.tight_layout()
         plt.show()
 

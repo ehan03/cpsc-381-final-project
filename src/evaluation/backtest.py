@@ -202,7 +202,7 @@ class BacktestFramework:
             color="red",
             linestyle="--",
         )
-        ax.set_title("Bankroll Over Time")
+
         ax.set_xlabel("Date")
         ax.set_ylabel("Bankroll ($)")
         ax.legend()
@@ -237,7 +237,7 @@ class BacktestFramework:
             color="grey",
             linestyle="--",
         )
-        ax.set_title("ROI Over Time")
+
         ax.set_xlabel("Date")
         ax.set_ylabel("ROI (%)")
         ax.legend()
