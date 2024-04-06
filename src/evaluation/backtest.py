@@ -69,12 +69,6 @@ class BacktestFramework:
         model_probs["RED_PROBS_GBM"] = red_probs_gbm
         model_probs["BLUE_PROBS_GBM"] = blue_probs_gbm
 
-        # Ensemble
-        red_probs_ensemble = (red_probs_lr + red_probs_rf + red_probs_gbm) / 3
-        blue_probs_ensemble = (blue_probs_lr + blue_probs_rf + blue_probs_gbm) / 3
-        model_probs["RED_PROBS_ENSEMBLE"] = red_probs_ensemble
-        model_probs["BLUE_PROBS_ENSEMBLE"] = blue_probs_ensemble
-
         return model_probs
 
     def helper_calculate_profit(
@@ -97,15 +91,12 @@ class BacktestFramework:
             "BANKROLL_LR": [self.initial_bankroll],
             "BANKROLL_RF": [self.initial_bankroll],
             "BANKROLL_GBM": [self.initial_bankroll],
-            "BANKROLL_ENSEMBLE": [self.initial_bankroll],
             "TOTAL_WAGER_LR": [0.0],
             "TOTAL_WAGER_RF": [0.0],
             "TOTAL_WAGER_GBM": [0.0],
-            "TOTAL_WAGER_ENSEMBLE": [0.0],
             "ROI_LR": [0.0],
             "ROI_RF": [0.0],
             "ROI_GBM": [0.0],
-            "ROI_ENSEMBLE": [0.0],
         }
 
         for event_id in event_ids:
@@ -114,7 +105,7 @@ class BacktestFramework:
             blue_odds = sliced_df["BLUE_FIGHTER_ODDS"].to_numpy()
             results_dict["DATES"].append(pd.to_datetime(sliced_df["DATE"].values[0]))
 
-            for model in ["LR", "RF", "GBM", "ENSEMBLE"]:
+            for model in ["LR", "RF", "GBM"]:
                 red_probs = sliced_df[f"RED_PROBS_{model}"].to_numpy()
                 blue_probs = sliced_df[f"BLUE_PROBS_{model}"].to_numpy()
 
@@ -177,15 +168,26 @@ class BacktestFramework:
         return pd.DataFrame(results_dict)
 
     def plot_bankrolls_over_time(self, results_df: pd.DataFrame) -> None:
+        plt.style.use("ggplot")
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.step(
-            results_df["DATES"], results_df["BANKROLL_LR"], label="Logistic Regression"
+            results_df["DATES"],
+            results_df["BANKROLL_LR"],
+            label="Logistic Regression",
+            color="#ff8389",
         )
-        ax.step(results_df["DATES"], results_df["BANKROLL_RF"], label="Random Forest")
         ax.step(
-            results_df["DATES"], results_df["BANKROLL_GBM"], label="Gradient Boosting"
+            results_df["DATES"],
+            results_df["BANKROLL_RF"],
+            label="Random Forest",
+            color="#6929c4",
         )
-        ax.step(results_df["DATES"], results_df["BANKROLL_ENSEMBLE"], label="Ensemble")
+        ax.step(
+            results_df["DATES"],
+            results_df["BANKROLL_GBM"],
+            label="Gradient Boosting",
+            color="#1192e8",
+        )
         ax.hlines(
             y=self.initial_bankroll,
             xmin=results_df["DATES"].min(),
@@ -204,14 +206,30 @@ class BacktestFramework:
         ax.set_xlabel("Date")
         ax.set_ylabel("Bankroll ($)")
         ax.legend()
+        plt.tight_layout()
         plt.show()
 
     def plot_roi_over_time(self, results_df: pd.DataFrame) -> None:
+        plt.style.use("ggplot")
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.step(results_df["DATES"], results_df["ROI_LR"], label="Logistic Regression")
-        ax.step(results_df["DATES"], results_df["ROI_RF"], label="Random Forest")
-        ax.step(results_df["DATES"], results_df["ROI_GBM"], label="Gradient Boosting")
-        ax.step(results_df["DATES"], results_df["ROI_ENSEMBLE"], label="Ensemble")
+        ax.step(
+            results_df["DATES"],
+            results_df["ROI_LR"],
+            label="Logistic Regression",
+            color="#ff8389",
+        )
+        ax.step(
+            results_df["DATES"],
+            results_df["ROI_RF"],
+            label="Random Forest",
+            color="#6929c4",
+        )
+        ax.step(
+            results_df["DATES"],
+            results_df["ROI_GBM"],
+            label="Gradient Boosting",
+            color="#1192e8",
+        )
         ax.hlines(
             y=0,
             xmin=results_df["DATES"].min(),
@@ -223,6 +241,7 @@ class BacktestFramework:
         ax.set_xlabel("Date")
         ax.set_ylabel("ROI (%)")
         ax.legend()
+        plt.tight_layout()
         plt.show()
 
     def __call__(self) -> None:
@@ -238,11 +257,9 @@ class BacktestFramework:
                     "BANKROLL_LR",
                     "BANKROLL_RF",
                     "BANKROLL_GBM",
-                    "BANKROLL_ENSEMBLE",
                     "ROI_LR",
                     "ROI_RF",
                     "ROI_GBM",
-                    "ROI_ENSEMBLE",
                 ]
             ].tail(1)
         )
