@@ -14,3 +14,6 @@ pip install -r requirements.txt
 ```
 
 3. Run the Jupyter notebook `walkthrough.ipynb` to see the project in action.
+
+---
+Please check out [UFC-Predict](https://github.com/ehan03/UFC-Predict), a work in progress that this project builds on.
