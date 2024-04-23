@@ -17,5 +17,3 @@ pip install -r requirements.txt
 
 The report and proposal can be found in the `pdfs` folder.
 
----
-Please check out [UFC-Predict](https://github.com/ehan03/UFC-Predict), a work in progress that this project builds on.
