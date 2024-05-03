@@ -15,5 +15,5 @@ pip install -r requirements.txt
 
 3. Run the Jupyter notebook `walkthrough.ipynb` inside the `notebooks` folder to see the project in action and replicate the results presented in the report.
 
----
-Please check out [UFC-Predict](https://github.com/ehan03/UFC-Predict), a work in progress that this project builds on.
+The report and proposal can be found in the `pdfs` folder.
+
